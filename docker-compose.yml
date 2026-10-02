@@ -1,0 +1,49 @@
+services:
+
+  localstack:
+    image: localstack/localstack:3.0
+    container_name: localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs
+      - DEFAULT_REGION=us-east-1
+      - LOCALSTACK_AUTH_TOKEN=
+    volumes:
+      - "./localstack-init:/etc/localstack/init/ready.d"
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pulsegrid
+    volumes:
+      - ./metric-emitter/metric-emitter/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  metric-emitter:
+    build: ./metric-emitter/metric-emitter
+    container_name: metric-emitter
+    depends_on:
+      mysql:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+    restart: on-failure
+
+  metric-aggregator:
+    build: ./metric-aggregator
+    container_name: metric-aggregator
+    depends_on:
+      mysql:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+    restart: on-failure
