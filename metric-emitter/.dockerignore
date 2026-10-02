@@ -1,0 +1,11 @@
+# Git history
+.git
+.gitignore
+
+# IDE & docs
+.idea
+*.iml
+*.md
+
+# Target folder (Maven will rebuild)
+target
